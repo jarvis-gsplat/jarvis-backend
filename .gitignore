@@ -1,6 +1,7 @@
 #FOLDERS
 uploads/
 assets/
+processed/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
