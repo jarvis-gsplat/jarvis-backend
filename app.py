@@ -1,11 +1,11 @@
 from flask import Flask, jsonify, request, Response, url_for
-import docker, os, shutil, time
+import docker, os, shutil, time, datetime
 import boto3
 from botocore.exceptions import NoCredentialsError
 
 # Initialize an S3 client
 s3_client = boto3.client('s3')
-
+local_last_updated = 0
 
 def download_file_from_s3(bucket_name, object_name, file_name=None):
     # If the file name is not specified, use the object name as the file name
