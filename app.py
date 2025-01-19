@@ -6,6 +6,7 @@ from botocore.exceptions import NoCredentialsError
 # Initialize an S3 client
 s3_client = boto3.client('s3')
 
+
 def download_file_from_s3(bucket_name, object_name, file_name=None):
     # If the file name is not specified, use the object name as the file name
     if file_name is None:
@@ -29,6 +30,11 @@ container = client.containers.get(DOCKER_CONTAINER_ID)
 UPLOAD_FOLDER = 'uploads'
 ASSET_FOLDER = 'assets'
 DOWNLOAD_FOLDER = 'downloads'
+
+    
+file_name = DOWNLOAD_FOLDER+'/images.jarvis'  # Local file path for the download
+bucket_name = 'jarvis-zipped-images'
+object_name = 'jarviszips'  # The object name in S3
 
 app = Flask(__name__)
 
@@ -81,16 +87,32 @@ def download_file():
     if os.path.exists(DOWNLOAD_FOLDER):
         shutil.rmtree(DOWNLOAD_FOLDER)
     os.makedirs(DOWNLOAD_FOLDER, exist_ok=True)
-    
-    file_name = DOWNLOAD_FOLDER+'/images.jarvis'  # Local file path for the download
-    bucket_name = 'jarvis-zipped-images'
-    object_name = 'jarviszips'  # The object name in S3
 
     try:
         download_file_from_s3(bucket_name, object_name, file_name)
         return "download success"
     except:
         return "download fail :("
+    
+@app.route('/check_metadata')
+def check_metadata():
+    global local_last_updated
+
+    try:
+        # Fetch the file metadata from S3
+        response = s3_client.head_object(Bucket=bucket_name, Key=object_name)
+        last_modified = response['LastModified']
+
+        # Compare the last modified time with the local timestamp
+        if local_last_updated != last_modified:
+            local_last_updated = last_modified
+            # Trigger download if metadata has changed
+            download_file()
+            return f"File updated. Last updated: {last_modified}. Download initiated."
+
+        return f"File not updated. Last checked at: {datetime.now()}"
+    except Exception as e:
+        return f"Error: {e}"
 
 def process_upload(filepath):
     if os.path.exists(ASSET_FOLDER):
