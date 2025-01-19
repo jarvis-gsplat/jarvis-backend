@@ -1,12 +1,34 @@
 from flask import Flask, jsonify, request, Response, url_for
 import docker, os, shutil, time
+import boto3
+from botocore.exceptions import NoCredentialsError
 
-DOCKER_CONTAINER_ID = "serene_shaw"
+# Initialize an S3 client
+s3_client = boto3.client('s3')
+
+def download_file_from_s3(bucket_name, object_name, file_name=None):
+    # If the file name is not specified, use the object name as the file name
+    if file_name is None:
+        file_name = object_name
+
+    try:
+        # Download the file from S3
+        s3_client.download_file(bucket_name, object_name, file_name)
+        print(f"File {object_name} downloaded successfully to {file_name}")
+    except FileNotFoundError:
+        print(f"The local file path {file_name} was not found.")
+    except NoCredentialsError:
+        print("Credentials not available.")
+    except Exception as e:
+        print(f"An error occurred: {e}")
+
+DOCKER_CONTAINER_ID = "affectionate_ride"
 client = docker.from_env()
 container = client.containers.get(DOCKER_CONTAINER_ID)
 
 UPLOAD_FOLDER = 'uploads'
 ASSET_FOLDER = 'assets'
+DOWNLOAD_FOLDER = 'downloads'
 
 app = Flask(__name__)
 
@@ -52,6 +74,23 @@ def upload_file():
         return jsonify({"message": f"File uploaded successfully to {filepath}"}), 200
 
     return jsonify({"error": "Invalid file type"}), 400
+
+@app.route('/download')
+def download_file():
+    # Clear the download folder
+    if os.path.exists(DOWNLOAD_FOLDER):
+        shutil.rmtree(DOWNLOAD_FOLDER)
+    os.makedirs(DOWNLOAD_FOLDER, exist_ok=True)
+    
+    file_name = DOWNLOAD_FOLDER+'/images.jarvis'  # Local file path for the download
+    bucket_name = 'jarvis-zipped-images'
+    object_name = 'jarviszips'  # The object name in S3
+
+    try:
+        download_file_from_s3(bucket_name, object_name, file_name)
+        return "download success"
+    except:
+        return "download fail :("
 
 def process_upload(filepath):
     if os.path.exists(ASSET_FOLDER):
