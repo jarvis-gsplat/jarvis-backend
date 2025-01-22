@@ -1,4 +1,4 @@
-# Repo for the backend components of JARVIS
+# Repo for the backend components of [JARVIS](https://github.com/jarvis-gsplat)
 
 - Automated download retrieval when a zipped file of images is uploaded to AWS S3.
 
